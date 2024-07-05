@@ -1,0 +1,51 @@
+from keras.models import load_model
+import cv2
+import numpy as np
+import tkinter as tk
+from tkinter import filedialog
+
+model = load_model("chest_xray/keras_model.h5", compile=False)
+
+class_names = [line.strip() for line in open("labels.txt", "r").readlines()]
+
+def process_image(image_path):
+    print(f"Processando imagem: {image_path}")
+    img = cv2.imread(image_path)
+
+    if img is None:
+        print(f"Erro: Imagem não encontrada no caminho {image_path}.")
+    else:
+        image = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
+
+        image_input = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
+
+        image_input = (image_input / 127.5) - 1
+
+        prediction = model.predict(image_input)
+        index = np.argmax(prediction)
+        class_name = class_names[index]
+        confidence_score = prediction[0][index]
+    
+        Classe = f"Classe: {class_name}"
+        Confianca = f"Grau de Confianca: {str(np.round(confidence_score * 100, 2))}%"
+
+        print(Classe, Confianca)
+
+        cv2.putText(img, Classe, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3)
+        cv2.putText(img, Confianca, (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3)
+
+        img_visu = cv2.resize(img, (800, 600))
+        cv2.imshow("IMG", img_visu)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+
+def select_image():
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(filetypes=[("Imagens", "*.jpg;*.jpeg;*.png")])
+    if file_path:
+        process_image(file_path)
+
+if __name__ == "__main__":
+    select_image()
